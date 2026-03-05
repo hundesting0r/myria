@@ -104,13 +104,18 @@ CRON
 
 install_cron() {
   local schedule="$1"
-  local existing
-  existing="$(crontab -l 2>/dev/null | grep -v "$MANAGED_PATTERN" || true)"
+  local tmp
+  tmp="$(mktemp)"
+  printf "%s\n" "$schedule" | sed '/^[[:space:]]*$/d' > "$tmp"
 
-  {
-    [[ -n "$existing" ]] && printf "%s\n" "$existing"
-    printf "%s\n" "$schedule"
-  } | sed '/^[[:space:]]*$/d' | crontab -
+  if ! crontab "$tmp"; then
+    echo "Failed to install crontab. Generated entries were:"
+    nl -ba "$tmp"
+    rm -f "$tmp"
+    exit 1
+  fi
+
+  rm -f "$tmp"
 }
 
 setup_scheduler() {
@@ -170,9 +175,7 @@ run_action_mode() {
 }
 
 clear_managed_cron() {
-  local existing
-  existing="$(crontab -l 2>/dev/null | grep -v "$MANAGED_PATTERN" || true)"
-  [[ -n "$existing" ]] && printf "%s\n" "$existing" | crontab - || crontab -r 2>/dev/null || true
+  crontab -r 2>/dev/null || true
   echo "Removed managed Myria scheduler cron entries."
 }
 
