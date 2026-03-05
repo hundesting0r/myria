@@ -6,6 +6,7 @@ CONFIG_FILE="${HOME}/.myria-scheduler.conf"
 LOG_FILE="${HOME}/.myria-scheduler.log"
 MYRIA_BIN="/usr/local/bin/myria-node"
 EXPECT_BIN="/usr/bin/expect"
+MANAGED_PATTERN='schedule-node.sh --action'
 
 script_path() {
   cd "$(dirname "$0")" && pwd
@@ -80,33 +81,31 @@ build_schedule_lines() {
   local node_count="$1"
   local self_path
   self_path="$(script_path)"
-  local cron_env
-  cron_env='PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
   if (( node_count == 2 )); then
     cat <<CRON
-0 2 * * * $cron_env /bin/bash "$self_path" --action stop 2 >> "$LOG_FILE" 2>&1 $TAG
-5 2 * * * $cron_env /bin/bash "$self_path" --action start 1 >> "$LOG_FILE" 2>&1 $TAG
-0 14 * * * $cron_env /bin/bash "$self_path" --action stop 1 >> "$LOG_FILE" 2>&1 $TAG
-5 14 * * * $cron_env /bin/bash "$self_path" --action start 2 >> "$LOG_FILE" 2>&1 $TAG
+0 2 * * * /bin/bash $self_path --action stop 2 >> $LOG_FILE 2>&1
+5 2 * * * /bin/bash $self_path --action start 1 >> $LOG_FILE 2>&1
+0 14 * * * /bin/bash $self_path --action stop 1 >> $LOG_FILE 2>&1
+5 14 * * * /bin/bash $self_path --action start 2 >> $LOG_FILE 2>&1
 CRON
     return
   fi
 
   cat <<CRON
-0 2 * * * $cron_env /bin/bash "$self_path" --action stop 3 >> "$LOG_FILE" 2>&1 $TAG
-5 2 * * * $cron_env /bin/bash "$self_path" --action start 1 >> "$LOG_FILE" 2>&1 $TAG
-0 10 * * * $cron_env /bin/bash "$self_path" --action stop 1 >> "$LOG_FILE" 2>&1 $TAG
-5 10 * * * $cron_env /bin/bash "$self_path" --action start 2 >> "$LOG_FILE" 2>&1 $TAG
-0 18 * * * $cron_env /bin/bash "$self_path" --action stop 2 >> "$LOG_FILE" 2>&1 $TAG
-5 18 * * * $cron_env /bin/bash "$self_path" --action start 3 >> "$LOG_FILE" 2>&1 $TAG
+0 2 * * * /bin/bash $self_path --action stop 3 >> $LOG_FILE 2>&1
+5 2 * * * /bin/bash $self_path --action start 1 >> $LOG_FILE 2>&1
+0 10 * * * /bin/bash $self_path --action stop 1 >> $LOG_FILE 2>&1
+5 10 * * * /bin/bash $self_path --action start 2 >> $LOG_FILE 2>&1
+0 18 * * * /bin/bash $self_path --action stop 2 >> $LOG_FILE 2>&1
+5 18 * * * /bin/bash $self_path --action start 3 >> $LOG_FILE 2>&1
 CRON
 }
 
 install_cron() {
   local schedule="$1"
   local existing
-  existing="$(crontab -l 2>/dev/null | grep -vF "$TAG" || true)"
+  existing="$(crontab -l 2>/dev/null | grep -v "$MANAGED_PATTERN" || true)"
 
   {
     [[ -n "$existing" ]] && printf "%s\n" "$existing"
@@ -149,7 +148,7 @@ setup_scheduler() {
   echo "Config: $CONFIG_FILE"
   echo "Log: $LOG_FILE"
   echo "Managed cron entries:"
-  crontab -l | grep -F "$TAG" || true
+  crontab -l | grep "$MANAGED_PATTERN" || true
 }
 
 run_action_mode() {
@@ -172,7 +171,7 @@ run_action_mode() {
 
 clear_managed_cron() {
   local existing
-  existing="$(crontab -l 2>/dev/null | grep -vF "$TAG" || true)"
+  existing="$(crontab -l 2>/dev/null | grep -v "$MANAGED_PATTERN" || true)"
   [[ -n "$existing" ]] && printf "%s\n" "$existing" | crontab - || crontab -r 2>/dev/null || true
   echo "Removed managed Myria scheduler cron entries."
 }
