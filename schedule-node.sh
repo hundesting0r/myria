@@ -1,98 +1,238 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# init crontab silently if non-existent
-crontab -l >/dev/null 2>&1 || crontab - <<'CRON'
+TAG="# MYRIA-SCHEDULER"
+CONFIG_FILE="${HOME}/.myria-scheduler.conf"
+LOG_FILE="${HOME}/.myria-scheduler.log"
+MYRIA_BIN="/usr/local/bin/myria-node"
+EXPECT_BIN="/usr/bin/expect"
+
+script_path() {
+  cd "$(dirname "$0")" && pwd
+  printf "%s/%s\n" "$PWD" "$(basename "$0")"
+}
+
+die() {
+  printf "ERROR: %s\n" "$*" >&2
+  exit 1
+}
+
+require_bins() {
+  [[ -x "$MYRIA_BIN" ]] || die "Myria binary not found at $MYRIA_BIN"
+  [[ -x "$EXPECT_BIN" ]] || die "Expect binary not found at $EXPECT_BIN"
+  command -v crontab >/dev/null 2>&1 || die "crontab command not available"
+}
+
+is_int() {
+  [[ "$1" =~ ^[0-9]+$ ]]
+}
+
+run_myria_action() {
+  local action="$1"
+  local api_key="$2"
+
+  [[ "$action" == "start" || "$action" == "stop" ]] || die "Invalid action: $action"
+
+  ACTION="$action" API_KEY="$api_key" MYRIA_BIN="$MYRIA_BIN" "$EXPECT_BIN" <<'EXP'
+set timeout 120
+spawn $env(MYRIA_BIN) --$env(ACTION)
+expect {
+  -re {Enter the node API Key:} { send -- "$env(API_KEY)\r" }
+  timeout { puts "Timed out waiting for API key prompt"; exit 1 }
+}
+expect eof
+set status [lindex [wait] 3]
+exit $status
+EXP
+}
+
+load_config() {
+  [[ -f "$CONFIG_FILE" ]] || die "Config not found: $CONFIG_FILE. Run setup first."
+  # shellcheck disable=SC1090
+  source "$CONFIG_FILE"
+
+  is_int "${NODE_COUNT:-}" || die "NODE_COUNT missing/invalid in config"
+  (( NODE_COUNT >= 2 && NODE_COUNT <= 3 )) || die "NODE_COUNT must be 2 or 3"
+
+  local i
+  for (( i=1; i<=NODE_COUNT; i++ )); do
+    local var="API_KEY_${i}"
+    [[ -n "${!var:-}" ]] || die "$var missing in config"
+  done
+}
+
+write_config() {
+  local node_count="$1"
+  shift
+  local -a keys=("$@")
+
+  umask 077
+  {
+    printf "NODE_COUNT=%q\n" "$node_count"
+    local i
+    for (( i=1; i<=node_count; i++ )); do
+      printf "API_KEY_%d=%q\n" "$i" "${keys[$((i-1))]}"
+    done
+  } > "$CONFIG_FILE"
+}
+
+build_schedule_lines() {
+  local node_count="$1"
+  local active="$2"
+  local self_path
+  self_path="$(script_path)"
+
+  local s1 s2 s3
+  if (( node_count == 2 )); then
+    if (( active == 1 )); then
+      s1=1; s2=2
+    else
+      s1=2; s2=1
+    fi
+
+    cat <<CRON
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 2 * * * /bin/bash "$self_path" --action stop $s1 >> "$LOG_FILE" 2>&1 $TAG
+5 2 * * * /bin/bash "$self_path" --action start $s2 >> "$LOG_FILE" 2>&1 $TAG
+0 14 * * * /bin/bash "$self_path" --action stop $s2 >> "$LOG_FILE" 2>&1 $TAG
+5 14 * * * /bin/bash "$self_path" --action start $s1 >> "$LOG_FILE" 2>&1 $TAG
 CRON
+    return
+  fi
 
-echo -n "How many nodes do you want to schedule (2-3)? "
-read -r node_count
+  # 3-node cycle in 8-hour blocks, meeting >=6h/day requirement.
+  s1=$active
+  s2=$(( (active % 3) + 1 ))
+  s3=$(( (s2 % 3) + 1 ))
 
-if (( node_count < 2 )); then
-    echo "no need for a scheduler with just one node ;)"
-    exit 0
-fi
-
-if (( node_count > 3 )); then
-    echo "you need to run each node for 6 hours for max rewards, therefore you cannot run more than 3 on a single server"
-    echo "4 nodes won't work since downtime for stopping and starting has to be included"
-    exit 1
-fi
-
-echo -n "Enter your first API key: "
-read -r api_1
-
-echo -n "Enter your second API key: "
-read -r api_2
-
-if (( node_count > 2 )); then
-    echo -n "Enter your third API key: "
-    read -r api_3
-fi
-
-echo -n "Which node is currently running right now (1-${node_count})? "
-read -r active_node
-
-if (( active_node < 1 || active_node > node_count )); then
-    echo "Invalid running node: ${active_node}. Expected a number from 1 to ${node_count}."
-    exit 1
-fi
-
-# Preserve any existing non-myria cron jobs and replace only managed entries.
-existing_cron="$(crontab -l 2>/dev/null | grep -v '# MYRIA-SCHEDULER' || true)"
-
-if (( node_count == 2 )); then
-    case "$active_node" in
-        1)
-            stop_1="$api_1"; start_1="$api_2"
-            stop_2="$api_2"; start_2="$api_1"
-            ;;
-        2)
-            stop_1="$api_2"; start_1="$api_1"
-            stop_2="$api_1"; start_2="$api_2"
-            ;;
-    esac
-
-    new_jobs=$(cat <<CRON
-0 2 * * * echo "$stop_1" | myria-node --stop # MYRIA-SCHEDULER
-5 2 * * * echo "$start_1" | myria-node --start # MYRIA-SCHEDULER
-0 14 * * * echo "$stop_2" | myria-node --stop # MYRIA-SCHEDULER
-5 14 * * * echo "$start_2" | myria-node --start # MYRIA-SCHEDULER
+  cat <<CRON
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 2 * * * /bin/bash "$self_path" --action stop $s1 >> "$LOG_FILE" 2>&1 $TAG
+5 2 * * * /bin/bash "$self_path" --action start $s2 >> "$LOG_FILE" 2>&1 $TAG
+0 10 * * * /bin/bash "$self_path" --action stop $s2 >> "$LOG_FILE" 2>&1 $TAG
+5 10 * * * /bin/bash "$self_path" --action start $s3 >> "$LOG_FILE" 2>&1 $TAG
+0 18 * * * /bin/bash "$self_path" --action stop $s3 >> "$LOG_FILE" 2>&1 $TAG
+5 18 * * * /bin/bash "$self_path" --action start $s1 >> "$LOG_FILE" 2>&1 $TAG
 CRON
-)
-fi
+}
 
-if (( node_count == 3 )); then
-    case "$active_node" in
-        1)
-            stop_1="$api_1"; start_1="$api_2"
-            stop_2="$api_2"; start_2="$api_3"
-            stop_3="$api_3"; start_3="$api_1"
-            ;;
-        2)
-            stop_1="$api_2"; start_1="$api_3"
-            stop_2="$api_3"; start_2="$api_1"
-            stop_3="$api_1"; start_3="$api_2"
-            ;;
-        3)
-            stop_1="$api_3"; start_1="$api_1"
-            stop_2="$api_1"; start_2="$api_2"
-            stop_3="$api_2"; start_3="$api_3"
-            ;;
-    esac
+install_cron() {
+  local schedule="$1"
+  local existing
+  existing="$(crontab -l 2>/dev/null | grep -vF "$TAG" | grep -v '^SHELL=/bin/bash$' | grep -v '^PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin$' || true)"
 
-    new_jobs=$(cat <<CRON
-0 2 * * * echo "$stop_1" | myria-node --stop # MYRIA-SCHEDULER
-5 2 * * * echo "$start_1" | myria-node --start # MYRIA-SCHEDULER
-0 10 * * * echo "$stop_2" | myria-node --stop # MYRIA-SCHEDULER
-5 10 * * * echo "$start_2" | myria-node --start # MYRIA-SCHEDULER
-0 18 * * * echo "$stop_3" | myria-node --stop # MYRIA-SCHEDULER
-5 18 * * * echo "$start_3" | myria-node --start # MYRIA-SCHEDULER
-CRON
-)
-fi
+  {
+    [[ -n "$existing" ]] && printf "%s\n" "$existing"
+    printf "%s\n" "$schedule"
+  } | sed '/^[[:space:]]*$/d' | crontab -
+}
 
-{ printf "%s\n" "$existing_cron"; printf "%s\n" "$new_jobs"; } | sed '/^[[:space:]]*$/d' | crontab -
+setup_scheduler() {
+  require_bins
 
-echo "Myria scheduler installed."
-echo "Current managed entries:"
-crontab -l | grep 'MYRIA-SCHEDULER' || true
+  local node_count
+  while true; do
+    read -r -p "How many nodes do you want to schedule (2-3)? " node_count
+    if is_int "$node_count" && (( node_count >= 2 && node_count <= 3 )); then
+      break
+    fi
+    echo "Please enter 2 or 3."
+  done
+
+  local -a keys=()
+  local i
+  for (( i=1; i<=node_count; i++ )); do
+    local key
+    while true; do
+      read -r -p "Enter API key for node $i: " key
+      if [[ -n "$key" ]]; then
+        keys+=("$key")
+        break
+      fi
+      echo "API key cannot be empty."
+    done
+  done
+
+  local active
+  while true; do
+    read -r -p "Which node is currently running right now (1-${node_count})? " active
+    if is_int "$active" && (( active >= 1 && active <= node_count )); then
+      break
+    fi
+    echo "Please enter a number between 1 and ${node_count}."
+  done
+
+  write_config "$node_count" "${keys[@]}"
+  local schedule
+  schedule="$(build_schedule_lines "$node_count" "$active")"
+  install_cron "$schedule"
+
+  echo "Scheduler installed."
+  echo "Config: $CONFIG_FILE"
+  echo "Log: $LOG_FILE"
+  echo "Managed cron entries:"
+  crontab -l | grep -F "$TAG" || true
+}
+
+run_action_mode() {
+  require_bins
+  load_config
+
+  local action="$1"
+  local idx="$2"
+
+  is_int "$idx" || die "Node index must be numeric"
+  (( idx >= 1 && idx <= NODE_COUNT )) || die "Node index out of range (1-${NODE_COUNT})"
+
+  local var="API_KEY_${idx}"
+  local key="${!var}"
+
+  printf "[%s] %s node %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$action" "$idx"
+  run_myria_action "$action" "$key"
+  printf "[%s] %s node %s complete\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$action" "$idx"
+}
+
+clear_managed_cron() {
+  local existing
+  existing="$(crontab -l 2>/dev/null | grep -vF "$TAG" | grep -v '^SHELL=/bin/bash$' | grep -v '^PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin$' || true)"
+  [[ -n "$existing" ]] && printf "%s\n" "$existing" | crontab - || crontab -r 2>/dev/null || true
+  echo "Removed managed Myria scheduler cron entries."
+}
+
+usage() {
+  cat <<USAGE
+Usage:
+  bash schedule-node.sh                    # interactive setup and cron install
+  bash schedule-node.sh --action start N   # start node N from saved config
+  bash schedule-node.sh --action stop N    # stop node N from saved config
+  bash schedule-node.sh --clear-cron       # remove managed cron lines
+USAGE
+}
+
+main() {
+  if (( $# == 0 )); then
+    setup_scheduler
+    return
+  fi
+
+  case "$1" in
+    --action)
+      [[ $# -eq 3 ]] || die "--action requires: start|stop and node index"
+      run_action_mode "$2" "$3"
+      ;;
+    --clear-cron)
+      clear_managed_cron
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
