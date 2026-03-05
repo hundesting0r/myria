@@ -78,50 +78,35 @@ write_config() {
 
 build_schedule_lines() {
   local node_count="$1"
-  local active="$2"
   local self_path
   self_path="$(script_path)"
+  local cron_env
+  cron_env='PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
-  local s1 s2 s3
   if (( node_count == 2 )); then
-    if (( active == 1 )); then
-      s1=1; s2=2
-    else
-      s1=2; s2=1
-    fi
-
     cat <<CRON
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-0 2 * * * /bin/bash "$self_path" --action stop $s1 >> "$LOG_FILE" 2>&1 $TAG
-5 2 * * * /bin/bash "$self_path" --action start $s2 >> "$LOG_FILE" 2>&1 $TAG
-0 14 * * * /bin/bash "$self_path" --action stop $s2 >> "$LOG_FILE" 2>&1 $TAG
-5 14 * * * /bin/bash "$self_path" --action start $s1 >> "$LOG_FILE" 2>&1 $TAG
+0 2 * * * $cron_env /bin/bash "$self_path" --action stop 2 >> "$LOG_FILE" 2>&1 $TAG
+5 2 * * * $cron_env /bin/bash "$self_path" --action start 1 >> "$LOG_FILE" 2>&1 $TAG
+0 14 * * * $cron_env /bin/bash "$self_path" --action stop 1 >> "$LOG_FILE" 2>&1 $TAG
+5 14 * * * $cron_env /bin/bash "$self_path" --action start 2 >> "$LOG_FILE" 2>&1 $TAG
 CRON
     return
   fi
 
-  # 3-node cycle in 8-hour blocks, meeting >=6h/day requirement.
-  s1=$active
-  s2=$(( (active % 3) + 1 ))
-  s3=$(( (s2 % 3) + 1 ))
-
   cat <<CRON
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-0 2 * * * /bin/bash "$self_path" --action stop $s1 >> "$LOG_FILE" 2>&1 $TAG
-5 2 * * * /bin/bash "$self_path" --action start $s2 >> "$LOG_FILE" 2>&1 $TAG
-0 10 * * * /bin/bash "$self_path" --action stop $s2 >> "$LOG_FILE" 2>&1 $TAG
-5 10 * * * /bin/bash "$self_path" --action start $s3 >> "$LOG_FILE" 2>&1 $TAG
-0 18 * * * /bin/bash "$self_path" --action stop $s3 >> "$LOG_FILE" 2>&1 $TAG
-5 18 * * * /bin/bash "$self_path" --action start $s1 >> "$LOG_FILE" 2>&1 $TAG
+0 2 * * * $cron_env /bin/bash "$self_path" --action stop 3 >> "$LOG_FILE" 2>&1 $TAG
+5 2 * * * $cron_env /bin/bash "$self_path" --action start 1 >> "$LOG_FILE" 2>&1 $TAG
+0 10 * * * $cron_env /bin/bash "$self_path" --action stop 1 >> "$LOG_FILE" 2>&1 $TAG
+5 10 * * * $cron_env /bin/bash "$self_path" --action start 2 >> "$LOG_FILE" 2>&1 $TAG
+0 18 * * * $cron_env /bin/bash "$self_path" --action stop 2 >> "$LOG_FILE" 2>&1 $TAG
+5 18 * * * $cron_env /bin/bash "$self_path" --action start 3 >> "$LOG_FILE" 2>&1 $TAG
 CRON
 }
 
 install_cron() {
   local schedule="$1"
   local existing
-  existing="$(crontab -l 2>/dev/null | grep -vF "$TAG" | grep -v '^SHELL=/bin/bash$' | grep -v '^PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin$' || true)"
+  existing="$(crontab -l 2>/dev/null | grep -vF "$TAG" || true)"
 
   {
     [[ -n "$existing" ]] && printf "%s\n" "$existing"
@@ -155,18 +140,9 @@ setup_scheduler() {
     done
   done
 
-  local active
-  while true; do
-    read -r -p "Which node is currently running right now (1-${node_count})? " active
-    if is_int "$active" && (( active >= 1 && active <= node_count )); then
-      break
-    fi
-    echo "Please enter a number between 1 and ${node_count}."
-  done
-
   write_config "$node_count" "${keys[@]}"
   local schedule
-  schedule="$(build_schedule_lines "$node_count" "$active")"
+  schedule="$(build_schedule_lines "$node_count")"
   install_cron "$schedule"
 
   echo "Scheduler installed."
@@ -196,7 +172,7 @@ run_action_mode() {
 
 clear_managed_cron() {
   local existing
-  existing="$(crontab -l 2>/dev/null | grep -vF "$TAG" | grep -v '^SHELL=/bin/bash$' | grep -v '^PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin$' || true)"
+  existing="$(crontab -l 2>/dev/null | grep -vF "$TAG" || true)"
   [[ -n "$existing" ]] && printf "%s\n" "$existing" | crontab - || crontab -r 2>/dev/null || true
   echo "Removed managed Myria scheduler cron entries."
 }
