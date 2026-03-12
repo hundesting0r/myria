@@ -66,17 +66,17 @@ log_file_q="$(shell_quote "$LOG_FILE")"
 
 cron_jobs=""
 if (( node_count == 2 )); then
-  cron_jobs+="0 2 * * * printf '%s\\n' ${api_2_q} | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
-  cron_jobs+="5 2 * * * printf '%s\\n' ${api_1_q} | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
-  cron_jobs+="0 14 * * * printf '%s\\n' ${api_1_q} | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
-  cron_jobs+="5 14 * * * printf '%s\\n' ${api_2_q} | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="0 2 * * * API_KEY=${api_2_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="5 2 * * * API_KEY=${api_1_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="0 14 * * * API_KEY=${api_1_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="5 14 * * * API_KEY=${api_2_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
 else
-  cron_jobs+="0 2 * * * printf '%s\\n' ${api_3_q} | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
-  cron_jobs+="5 2 * * * printf '%s\\n' ${api_1_q} | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
-  cron_jobs+="0 10 * * * printf '%s\\n' ${api_1_q} | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
-  cron_jobs+="5 10 * * * printf '%s\\n' ${api_2_q} | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
-  cron_jobs+="0 18 * * * printf '%s\\n' ${api_2_q} | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
-  cron_jobs+="5 18 * * * printf '%s\\n' ${api_3_q} | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="0 2 * * * API_KEY=${api_3_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="5 2 * * * API_KEY=${api_1_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="0 10 * * * API_KEY=${api_1_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="5 10 * * * API_KEY=${api_2_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="0 18 * * * API_KEY=${api_2_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --stop >> ${log_file_q} 2>&1"$'\n'
+  cron_jobs+="5 18 * * * API_KEY=${api_3_q} awk 'BEGIN{print ENVIRON[\"API_KEY\"]}' | ${myria_node_bin_q} --start >> ${log_file_q} 2>&1"$'\n'
 fi
 
 existing_cron="$(crontab -l 2>/dev/null || true)"
