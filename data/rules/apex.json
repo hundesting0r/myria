@@ -1,0 +1,164 @@
+[
+  {
+    "record_id": "apex-eod-trailing-50k-evaluation--v1",
+    "schema_version": "1.0.0",
+    "version": 1,
+    "status": "draft",
+    "firm_id": "apex",
+    "plan_name": "Evaluation Account (EA) — EOD Trailing Drawdown",
+    "plan_kind": "one_step",
+    "account_size": 50000,
+    "currency": "USD",
+    "phase": "evaluation",
+    "phase_label": "Evaluation (EA)",
+    "effective_from": "2026-03-01",
+    "effective_to": null,
+    "source_url": "https://apextraderfunding.com/help-center/eod-trailing-drawdown-accounts/eod-drawdown-explained/",
+    "last_verified_on": "2026-06-07",
+    "change_notes": "Seed record compiled 2026-06-07 from Apex's official help-center pages (apextraderfunding.com returned HTTP 403 to direct fetch in the research environment; facts drawn from search-engine-indexed snippets of those pages plus cross-checked third-party trackers — see source_url). Marked 'draft' pending a human operator confirming every field firsthand on apextraderfunding.com. Reflects the post-'Apex 4.0' ruleset that took effect around 2026-03-01 — pre-2026-03-01 ('Legacy') accounts ran a different consistency-rule formula and payout structure; do not use this record for an 'as of' query before that date. Apex also sells an Intraday Trailing Drawdown evaluation variant at the same sizes with different drawdown params; that variant is not yet captured as a separate lineage.",
+    "drawdown": {
+      "type": "EOD_trailing",
+      "calculation_basis": "balance",
+      "amount": { "kind": "fixed_dollar", "value": 2500 },
+      "lock": {
+        "locks": true,
+        "trigger": "balance_reaches_starting_balance",
+        "locked_level": { "kind": "fixed_dollar", "value": 50100 },
+        "trigger_threshold": null,
+        "notes": "Apex's own materials describe the lock level as 'starting balance + $100' (e.g. $50,100 on a $50K account) rather than exactly the starting balance — locked_level reflects that $100 offset, it is not a rounding artifact."
+      },
+      "notes": "Recalculated once per trading day at 4:59:59 PM ET off the END-OF-DAY (closing/realized) balance — intraday unrealized swings do not move the floor mid-session, but the resulting threshold is enforced in real time the instant balance touches it. The $2,500 amount is carried over from a pre-4.0 published table; Apex's exact post-4.0 EOD-variant figure for $50K should be re-checked directly against the live size/drawdown chart before this record is marked 'verified'."
+    },
+    "consistency_rule": {
+      "cap_percentage": 0,
+      "basis": "none",
+      "basis_definition": "Apex applies no best-day/consistency cap during the Evaluation phase — by the firm's own description an evaluation 'can be passed in a single session,' which a meaningful consistency constraint would make impossible.",
+      "applies_at": [],
+      "violation_consequence": ""
+    },
+    "targets_and_days": {
+      "profit_target": { "kind": "fixed_dollar", "value": 3000 },
+      "min_trading_days": 0,
+      "min_qualifying_day_amount": null,
+      "max_trading_days": null,
+      "notes": "Apex explicitly imposes NO minimum-trading-day requirement to pass an evaluation — reaching the profit target without breaching the drawdown is sufficient even on day one. This is a real point of divergence from Take Profit Trader (5-day minimum) and Tradeify's Select track (3-day minimum), both of which gate evaluation passes on a minimum day count to backstop their consistency rules."
+    },
+    "payout": {
+      "eligible": false,
+      "eligibility_notes": "Evaluation accounts cannot request payouts. Passing converts the account into a funded Performance Account (PA) — see this lineage's 'funded' record for PA payout terms — which itself requires a one-time PA activation fee before its very first withdrawal can be processed.",
+      "min_amount": null,
+      "max_amount": null,
+      "cadence": "not_applicable",
+      "cadence_notes": "",
+      "activation_fee": { "required": false, "amount": null },
+      "profit_split_to_trader_percentage": null
+    },
+    "prohibited_behaviors": {
+      "automated_trading": {
+        "status": "prohibited",
+        "notes": "Apex's 'Prohibited Activities' policy bans 'AI, autobots, algorithms, fully-automated trading systems and software, high-frequency trading (HFT), and any other automated trading.' Tools that merely speed up manual order entry (hotkeys, bracket/OCO templates) are reported as permitted — the dividing line is full automation of entry/exit decisions, not trading-assistance tooling in general."
+      },
+      "cross_account_hedging": {
+        "status": "prohibited",
+        "notes": "Apex states 'no hedging of any kind — directional trading only,' worded broadly enough to cover simultaneous opposing positions in the same/correlated instruments both within one account and across a trader's own multiple Apex accounts."
+      },
+      "dca_or_martingale": {
+        "status": "restricted",
+        "notes": "Not a flat ban: Apex's guidance targets martingale-style 'averaging into account death' as against the program's spirit, and a reported 2026-04 update permits at most one same-size re-entry on a losing trade, provided it doesn't trip the consistency rule. This is one of the most recently changed and least settled rules in Apex's book — re-confirm exact current wording before relying on it."
+      },
+      "news_trading": {
+        "status": "restricted",
+        "notes": "Trading through scheduled news/economic releases as part of an ordinary strategy is allowed; what Apex prohibits is 'chasing the market' or placing simultaneous opposing orders purely to gamble on a release's direction."
+      },
+      "vpn_usage": {
+        "status": "prohibited",
+        "notes": "Apex bans VPNs, proxy servers, cloud servers and other anonymizing tools used 'for the purpose of misrepresenting, concealing, or disguising your identity, device, or location' — an identity/geography-integrity rule, not a blanket tooling ban."
+      },
+      "copy_trading": {
+        "scope": "own_accounts_only",
+        "notes": "Copying/mirroring trades between DIFFERENT traders or accounts is prohibited, but Apex explicitly permits a trader to run one 'leader' account driving up to 19 'follower' accounts within their own Apex stable — consistent with Apex's stated cap of up to 20 active funded accounts per trader."
+      }
+    }
+  },
+  {
+    "record_id": "apex-eod-trailing-50k-funded--v1",
+    "schema_version": "1.0.0",
+    "version": 1,
+    "status": "draft",
+    "firm_id": "apex",
+    "plan_name": "Performance Account (PA) — EOD Trailing Drawdown",
+    "plan_kind": "one_step",
+    "account_size": 50000,
+    "currency": "USD",
+    "phase": "funded",
+    "phase_label": "PA — Performance Account",
+    "effective_from": "2026-03-01",
+    "effective_to": null,
+    "source_url": "https://apextraderfunding.com/help-center/additional-helpful-items/50-consistency-requirement/",
+    "last_verified_on": "2026-06-07",
+    "change_notes": "Seed record compiled 2026-06-07 alongside this lineage's evaluation record — see that record's change_notes for sourcing caveats (official Apex pages returned HTTP 403 to direct fetch; facts drawn from indexed snippets plus third-party corroboration). The headline figure here is the consistency cap, which is also the single biggest Legacy-vs-4.0 change Apex made: it moved from 30% of ALL-TIME cumulative profit (Legacy, grandfathered pre-2026-03-01 accounts) to 50% of profit SINCE THE LAST PAYOUT (current). Don't let an 'as of' query before 2026-03-01 resolve to this record — that date range needs its own Legacy-rule record, not yet in this knowledge base.",
+    "drawdown": {
+      "type": "EOD_trailing",
+      "calculation_basis": "balance",
+      "amount": { "kind": "fixed_dollar", "value": 2500 },
+      "lock": {
+        "locks": true,
+        "trigger": "balance_reaches_starting_balance",
+        "locked_level": { "kind": "fixed_dollar", "value": 50100 },
+        "trigger_threshold": null,
+        "notes": "Same lock mechanic carries forward from evaluation into the PA: the EOD-trailing floor stops ratcheting and freezes at starting balance + $100 ($50,100 here) the first time the closing balance reaches that level, and never moves again afterward — even if the balance later falls back below it."
+      },
+      "notes": "Identical mechanics to the evaluation phase (see that record): once-daily recalculation at 4:59:59 PM ET off the closing/realized balance. The consequence of a breach differs, though — in PA it triggers immediate account closure with open positions force-liquidated, vs. simply 'failing' an evaluation with nothing at stake but the entry fee."
+    },
+    "consistency_rule": {
+      "cap_percentage": 50,
+      "basis": "best_day_share_of_payout_eligible_profit",
+      "basis_definition": "No single trading day's profit may equal or exceed 50% of the account's total net profit accumulated SINCE THE LAST APPROVED PAYOUT (or since account inception, if none yet). Equivalently, the minimum cumulative profit required to clear the gate = (largest single day's profit so far) / 0.5. This replaced Apex's prior Legacy formula — 30% of ALL-TIME cumulative profit — around 2026-03-01; note the denominator reset behavior (per-payout-cycle vs. all-time) is itself a material change, not just the percentage move from 30 to 50.",
+      "applies_at": ["payout_calculation"],
+      "violation_consequence": "Does not fail the account or block trading day-to-day — it gates the payout request itself. A trader whose best day is too large a share simply cannot withdraw until additional, better-distributed profit brings the ratio back under the cap."
+    },
+    "targets_and_days": {
+      "profit_target": null,
+      "min_trading_days": 5,
+      "min_qualifying_day_amount": { "kind": "fixed_dollar", "value": 250 },
+      "max_trading_days": null,
+      "notes": "No ongoing profit target applies once funded — the PA only needs to stay above its drawdown floor. The figures shown here (5 days, $250/day net) are PAYOUT-gating requirements, not 'stay funded' requirements — see the payout block. The per-day minimum is reported to be account-size AND drawdown-variant specific: $250/day is the figure reported for a $50K EOD-trailing PA; the Intraday-trailing variant at the same size is reported to use $200/day. Confirm both numbers before marking this record 'verified'."
+    },
+    "payout": {
+      "eligible": true,
+      "eligibility_notes": "Every payout request — first and subsequent — requires (a) at least 5 'qualifying' trading days (need not be consecutive) that each net at least the min_qualifying_day_amount shown alongside, AND (b) the consistency check above passing for profit accrued since the last payout. Separately, a one-time PA activation fee (reported in the ~$85-130 range, due within 7 days of passing the evaluation) must be paid before the very first withdrawal can be processed at all — activation_fee captures a $100 midpoint estimate pending confirmation of the exact figure.",
+      "min_amount": { "kind": "fixed_dollar", "value": 500 },
+      "max_amount": { "kind": "fixed_dollar", "value": 1500 },
+      "cadence": "on_demand",
+      "cadence_notes": "Payouts can be requested on demand once the eligibility gates clear, but each PA carries a LIFETIME CAP of 6 total payouts, after which the PA is closed and the trader must requalify through a brand-new evaluation. Apex is reported to run a graduated payout-amount ladder across those 6 requests rather than a flat per-request ceiling (e.g. a $50K EOD PA reportedly steps from roughly $1,500 up toward $3,000 across the six, totaling near $13,000 lifetime); max_amount above captures only the FIRST-payout step of that ladder. The full per-step schedule is not yet modeled as structured data — needs direct verification and likely a future schema note (or per-payout-number records) to represent properly.",
+      "activation_fee": { "required": true, "amount": { "kind": "fixed_dollar", "value": 100 } },
+      "profit_split_to_trader_percentage": 90
+    },
+    "prohibited_behaviors": {
+      "automated_trading": {
+        "status": "prohibited",
+        "notes": "Same firm-wide 'Prohibited Activities' policy as the evaluation phase carries into the PA unchanged — see that record. If anything, enforcement is reported to be stricter once real payouts are at stake, though the written rule itself does not differ by phase."
+      },
+      "cross_account_hedging": {
+        "status": "prohibited",
+        "notes": "Same firm-wide 'no hedging of any kind — directional trading only' policy as the evaluation phase, applying across the trader's own multiple PAs as well as within a single account."
+      },
+      "dca_or_martingale": {
+        "status": "restricted",
+        "notes": "Same nuanced policy as the evaluation phase (see that record): discouraged as against the program's spirit, with a reported 2026-04 update allowing at most one same-size loser re-entry subject to the consistency rule. Re-confirm current wording specifically for funded-stage enforcement before relying on it."
+      },
+      "news_trading": {
+        "status": "restricted",
+        "notes": "Same policy as the evaluation phase: trading through news as part of an ordinary strategy is fine; placing opposing same-instant orders purely to gamble on a release's direction is not."
+      },
+      "vpn_usage": {
+        "status": "prohibited",
+        "notes": "Same firm-wide identity/geography-integrity rule as the evaluation phase — VPNs, proxies, and other anonymizers used to misrepresent identity, device, or location remain banned once funded."
+      },
+      "copy_trading": {
+        "scope": "own_accounts_only",
+        "notes": "Same policy as the evaluation phase: copying between different traders is banned, but running one 'leader' PA to drive up to 19 'follower' PAs within the trader's own Apex stable (cap: 20 active funded accounts total) is explicitly permitted — and is, in fact, the primary use case Apex's funded-stage copy-trading allowance exists to serve."
+      }
+    }
+  }
+]

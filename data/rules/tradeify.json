@@ -1,0 +1,164 @@
+[
+  {
+    "record_id": "tradeify-growth-50k-evaluation--v1",
+    "schema_version": "1.0.0",
+    "version": 1,
+    "status": "draft",
+    "firm_id": "tradeify",
+    "plan_name": "Growth Evaluation",
+    "plan_kind": "one_step",
+    "account_size": 50000,
+    "currency": "USD",
+    "phase": "evaluation",
+    "phase_label": "Growth Evaluation",
+    "effective_from": "2025-10-01",
+    "effective_to": null,
+    "source_url": "https://help.tradeify.co/en/articles/10495915-growth-evaluation-accounts",
+    "last_verified_on": "2026-06-07",
+    "change_notes": "Seed record compiled 2026-06-07 from Tradeify's help-center pages (help.tradeify.co and tradeify.co both returned HTTP 403 to direct fetch in the research environment; facts drawn from search-engine-indexed snippets of those exact pages, cross-checked against at least two independent third-party trackers — see source_url). 'effective_from' is a PLACEHOLDER ESTIMATE, not a confirmed publication date — Tradeify's help-center articles aren't visibly dated in any source found; replace once the operator confirms the real effective date. Tradeify runs THREE parallel account tracks (Growth / Select / Lightning) with materially different rules end to end — this lineage covers Growth specifically (chosen because it's the track carrying the 35% consistency figure referenced in this product's own positioning brief). Select and Lightning are separate lineages, not yet seeded — do not generalize any number in this lineage to 'Tradeify' as a whole.",
+    "drawdown": {
+      "type": "EOD_trailing",
+      "calculation_basis": "balance",
+      "amount": { "kind": "fixed_dollar", "value": 2000 },
+      "lock": {
+        "locks": true,
+        "trigger": "balance_reaches_starting_balance",
+        "locked_level": { "kind": "fixed_dollar", "value": 50100 },
+        "trigger_threshold": null,
+        "notes": "Mirrors Apex's '+$100 offset' lock almost exactly: once the end-of-day balance closes at or above starting balance + drawdown + $100, the trailing floor freezes permanently at starting balance + $100 ($50,100 here) and behaves as a static floor for the rest of the account's life — it will never move again, even if the balance later dips back down."
+      },
+      "notes": "Recalculated at end-of-day off the closing/realized balance, but Tradeify is explicit that a breach is enforced in real time intraday the moment balance touches the current floor — i.e. 'EOD' describes how the floor MOVES (once per day, upward only), not when a breach is detected (continuously). One early search result described an 'Advanced/Growth Challenge' split between intraday- and EOD-trailing variants; the weight of more recent sources suggests this referred to an older/renamed product line and that all CURRENT Tradeify tracks use EOD trailing — flagged for confirmation that no live intraday-trailing Tradeify product remains on offer. Funded accounts in this track also carry a separate same-day Daily Loss Limit ($1,250 at this $50K size) that is NOT the same thing as this trailing floor and is not modeled by this schema's drawdown block — see targets_and_days.notes for why, and consider it a candidate for a future schema extension if daily-loss-limit math needs first-class modeling."
+    },
+    "consistency_rule": {
+      "cap_percentage": 0,
+      "basis": "none",
+      "basis_definition": "Growth Evaluation carries no consistency/best-day rule at all. This is not an isolated fact — Tradeify's design visibly LINKS the two: every track that carries a consistency cap (Select Evaluation at 40%, every funded track) also carries a minimum-trading-day floor, and the one track that has neither (Growth Evaluation) doesn't need a day-count rule because there's no single-day-concentration risk to backstop.",
+      "applies_at": [],
+      "violation_consequence": ""
+    },
+    "targets_and_days": {
+      "profit_target": { "kind": "fixed_dollar", "value": 3000 },
+      "min_trading_days": 0,
+      "min_qualifying_day_amount": null,
+      "max_trading_days": null,
+      "notes": "Growth Evaluation has NO minimum-trading-day requirement — it can be passed in a single day if the profit target is reached without breaching either the trailing drawdown OR the separate same-day Daily Loss Limit (a $1,250 cap at this $50K size — distinct from, and smaller than, the account-level trailing drawdown amount; this schema models the account-level floor in the drawdown block, not same-day sub-limits, so the DLL is recorded only here in notes). Compare Tradeify's own Select Evaluation track, which requires a minimum of 3 trading days specifically BECAUSE it carries a 40% consistency rule that a 1-day pass would trivially dodge — the day-count and consistency rules are a matched pair by design."
+    },
+    "payout": {
+      "eligible": false,
+      "eligibility_notes": "Growth Evaluation accounts cannot request payouts; passing converts the account to a 'Growth Sim Funded' account (see the funded-phase record), which is where Tradeify's payout, consistency, and qualifying-day rules actually start to bind.",
+      "min_amount": null,
+      "max_amount": null,
+      "cadence": "not_applicable",
+      "cadence_notes": "",
+      "activation_fee": { "required": false, "amount": null },
+      "profit_split_to_trader_percentage": null
+    },
+    "prohibited_behaviors": {
+      "automated_trading": {
+        "status": "restricted",
+        "notes": "Allowed CONDITIONALLY, not banned outright — a meaningfully more permissive stance than Apex's or TPT's flat bans. Tradeify permits algorithmic/bot trading only when the trader can demonstrate sole personal ownership of the strategy, explicitly bans sharing that bot across other traders or other prop firms, and excludes high-frequency-trading (HFT) bots regardless of ownership. This is exactly the kind of cross-firm divergence that matters most to systematic/algo traders running one strategy across several funded accounts."
+      },
+      "cross_account_hedging": {
+        "status": "prohibited",
+        "notes": "Explicitly banned ACROSS ALL of a trader's Tradeify accounts — opposing positions in the same or correlated instruments used to offset risk, explicitly including mixing MINI/MICRO contracts of the same underlying in offsetting directions. Tradeify's language is unusually explicit about the cross-account scope, compared to firms whose hedging rules could plausibly be read as single-account-only."
+      },
+      "dca_or_martingale": {
+        "status": "allowed",
+        "notes": "Not formally banned — Tradeify's own guidance states there is no explicit rule against DCA, scaled/averaged entries, or position 'flipping.' The firm does informally caution against 'averaging into oblivion' (recklessly adding to a loser with no structured exit plan), but stops short of prohibiting the practice. Of the three firms seeded here, this is the most permissive stance on DCA/martingale — directly contrast Apex's 'restricted' (one same-size re-entry, conditional on the consistency rule) and TPT's 'not_addressed' (silent)."
+      },
+      "news_trading": {
+        "status": "allowed",
+        "notes": "Tradeify maintains a dedicated 'Rules: News Trading' help-center article stating no restriction exists — traders may trade through high-impact news releases entirely at their own risk, with the firm simply noting the volatility/slippage exposure. The most permissive of the three firms seeded here: TPT requires a hard mandatory-flat window at its funded stage, and Apex restricts only the specific 'gambling on direction via opposing orders' pattern."
+      },
+      "vpn_usage": {
+        "status": "restricted",
+        "notes": "Not a blanket ban — the line Tradeify draws is concealment of identity/location AT LOGIN, not VPN/VPS use in general. Specifically: using a VPN/VPS to log in in a way that masks a restricted-country residency is treated as an immediate-termination, forfeit-everything offense with no warning; using a VPS purely for trade EXECUTION after a normal, undisguised login is reported to be tolerated 'at your own risk.' Functionally similar in shape to TPT's geographic framing, but Tradeify states the rule (and its severe consequence) far more explicitly and specifically names VPS execution as a separate, tolerated use case."
+      },
+      "copy_trading": {
+        "scope": "prohibited",
+        "notes": "Tradeify's trader guidelines flatly state that 'team trading, collaborative trading, or any form of trade copying among users is strictly prohibited' — and unlike Apex (which carves out an explicit same-trader, own-accounts-only exception, even naming a specific follower-account cap), no self-to-self carve-out was found anywhere in Tradeify's published language. This is one of the highest-value 'fine there, breaks here' facts in this whole seed set: a leader/follower setup across one's own accounts that Apex explicitly sanctions could be a straight violation at Tradeify — important enough to verify directly with Tradeify support before any trader relies on this reading."
+      }
+    }
+  },
+  {
+    "record_id": "tradeify-growth-50k-funded--v1",
+    "schema_version": "1.0.0",
+    "version": 1,
+    "status": "draft",
+    "firm_id": "tradeify",
+    "plan_name": "Growth Sim Funded",
+    "plan_kind": "one_step",
+    "account_size": 50000,
+    "currency": "USD",
+    "phase": "funded",
+    "phase_label": "Growth Sim Funded",
+    "effective_from": "2025-10-01",
+    "effective_to": null,
+    "source_url": "https://help.tradeify.co/en/articles/10468320-rules-consistency-rule",
+    "last_verified_on": "2026-06-07",
+    "change_notes": "Seed record compiled 2026-06-07 alongside this lineage's evaluation record — see that record's change_notes for sourcing/date caveats (same blocked-fetch situation; same estimated effective_from). This record carries the headline '35% consistency cap' referenced in this product's own positioning brief — confirmed specifically for the GROWTH track at the funded/payout stage. Tradeify's OTHER tracks use entirely different figures: Select Evaluation runs a 40% cap that applies pre-funding only (its funded variants drop the rule completely), and Lightning runs a progressive 20%/25%/30% schedule keyed to payout sequence number rather than a flat cap. Those are separate lineages, not yet seeded — never let UI copy generalize 'Tradeify's consistency rule is 35%' beyond this specific plan_name.",
+    "drawdown": {
+      "type": "EOD_trailing",
+      "calculation_basis": "balance",
+      "amount": { "kind": "fixed_dollar", "value": 2000 },
+      "lock": {
+        "locks": true,
+        "trigger": "balance_reaches_starting_balance",
+        "locked_level": { "kind": "fixed_dollar", "value": 50100 },
+        "trigger_threshold": null,
+        "notes": "Same lock mechanic carries forward unchanged from the evaluation phase — see that record. A freshly-funded account starts at its starting balance, i.e. BEFORE the lock condition is met, so the floor is still actively trailing on day one of funded trading; it only freezes once the account has built enough of a cushion to cross the starting-balance-plus-$100 threshold."
+      },
+      "notes": "Same EOD-trailing mechanics as the evaluation phase carry forward — see that record for the full mechanism description. Funded accounts in this track also carry a separate same-day Daily Loss Limit, distinct from this account-level trailing floor and not modeled by this schema's drawdown block (see the evaluation record's notes for why)."
+    },
+    "consistency_rule": {
+      "cap_percentage": 35,
+      "basis": "best_day_share_of_payout_eligible_profit",
+      "basis_definition": "No single trading day's profit may exceed 35% of the account's total cumulative net profit measured from day one of the CURRENT PAYOUT CYCLE through the date of the payout request — i.e. (largest single day's profit within the cycle) / (cumulative profit within the cycle) must be at or below 0.35. Both counters — cumulative profit and 'biggest single day' — reset to zero immediately after each approved payout, so the cap re-applies fresh to each cycle rather than accumulating over the account's entire lifetime. This per-cycle reset is the single detail most likely to surprise a trader coming from a firm (like Apex, pre-2026, or TPT) that measures consistency against all-time cumulative profit instead.",
+      "applies_at": ["payout_calculation"],
+      "violation_consequence": "Gates the specific payout request rather than the account's standing or ability to keep trading — exceeding 35% blocks that withdrawal until additional, better-distributed profit brings the ratio back under the cap within the current cycle. Does not fail or close the account."
+    },
+    "targets_and_days": {
+      "profit_target": null,
+      "min_trading_days": 5,
+      "min_qualifying_day_amount": { "kind": "fixed_dollar", "value": 150 },
+      "max_trading_days": null,
+      "notes": "These are PAYOUT-CYCLE gating numbers, not account-maintenance requirements — Growth Sim Funded simply needs to stay above its drawdown floor to remain funded. To REQUEST a payout, the cycle must show 5 days that each net more than $150 at this $50K size (the threshold scales with account size per Tradeify's published table: $100 at $25K, $150 at $50K, $200 at $100K, $250 at $150K). There is no ongoing profit target to maintain funded status itself — only the gates that unlock a withdrawal."
+    },
+    "payout": {
+      "eligible": true,
+      "eligibility_notes": "Eligible to request a payout once the 5-qualifying-day gate (left) AND the 35% consistency check (above) both clear for the current cycle. No activation fee gates either the evaluation-to-funded conversion OR the account's first withdrawal — Tradeify is reported to be one of the few firms in this comparison set with no such fee anywhere in the funnel (contrast Apex's ~$100 PA-activation fee and TPT's $130 PRO-activation fee, both modeled in their respective funded records). Reported tiered profit split: 100% of the first $15,000 in cumulative profit from this account goes entirely to the trader, then 90/10 (trader/Tradeify) on amounts beyond that cumulative threshold — profit_split_to_trader_percentage below reflects the steady-state 90% tier; the $15K introductory-tier figure traces to a single third-party source and needs corroboration before this record can move to 'verified'.",
+      "min_amount": { "kind": "fixed_dollar", "value": 1000 },
+      "max_amount": { "kind": "fixed_dollar", "value": 3000 },
+      "cadence": "other",
+      "cadence_notes": "Not a fixed calendar cadence (unlike firms that run a flat 'weekly'/'biweekly' schedule) — a payout can be requested once the 5-qualifying-day-plus-consistency gate clears for the current cycle, and an approved payout immediately resets that cycle's counters to zero. The $3,000 max_amount shown is the per-request ceiling reported for the Growth track at this $50K size specifically; Tradeify's separate Select Flex track instead caps payouts at 50% of total profit up to its own ceiling — entirely different math, only relevant if/when that lineage is seeded.",
+      "activation_fee": { "required": false, "amount": null },
+      "profit_split_to_trader_percentage": 90
+    },
+    "prohibited_behaviors": {
+      "automated_trading": {
+        "status": "restricted",
+        "notes": "Same firm-wide conditional policy as the evaluation phase carries unchanged into the funded stage — see that record for the full ownership/HFT/no-sharing conditions."
+      },
+      "cross_account_hedging": {
+        "status": "prohibited",
+        "notes": "Same firm-wide, explicitly cross-account ban as the evaluation phase — see that record."
+      },
+      "dca_or_martingale": {
+        "status": "allowed",
+        "notes": "Same firm-wide informal-caution-but-not-banned stance as the evaluation phase — see that record."
+      },
+      "news_trading": {
+        "status": "allowed",
+        "notes": "Same firm-wide unrestricted policy as the evaluation phase — see that record. Notably, this does NOT tighten at the funded stage the way it does at firms like TPT (Test: allowed -> PRO: hard mandatory-flat window) — Tradeify keeps the same permissive stance end to end."
+      },
+      "vpn_usage": {
+        "status": "restricted",
+        "notes": "Same firm-wide login-concealment framing and severe consequence as the evaluation phase — see that record."
+      },
+      "copy_trading": {
+        "scope": "prohibited",
+        "notes": "Same firm-wide ban, with the same notable absence of a same-trader/own-accounts carve-out, as the evaluation phase — see that record for why this is one of the highest-value 'fine there, breaks here' facts in this seed set relative to Apex's explicit allowance."
+      }
+    }
+  }
+]

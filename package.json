@@ -1,0 +1,15 @@
+{
+  "name": "prop-rules-intel",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Cross-firm prop trading rules intelligence — rules knowledge base, comparison view, and (later) per-account tracker.",
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-data.mjs",
+    "dev": "node app/server.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}

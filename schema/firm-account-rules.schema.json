@@ -1,0 +1,377 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hundesting0r/myria/schema/firm-account-rules.schema.json",
+  "title": "Prop Firm Account Rules Record",
+  "description": "A single, versioned, date-stamped snapshot of the rulebook that applies to one firm's account plan/size/phase combination. This is the atomic unit of the rules knowledge base: the comparison view queries across these records, and the (future) per-account tracker evaluates a trader's live state against the record whose effective date range covers the trade timestamp. Enums + structured params are used everywhere a computation depends on the value (drawdown distance-to-breach, consistency-cap math, payout eligibility) — free text is reserved for human-readable caveats that don't drive computation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_id",
+    "schema_version",
+    "version",
+    "status",
+    "firm_id",
+    "plan_name",
+    "account_size",
+    "currency",
+    "phase",
+    "effective_from",
+    "effective_to",
+    "source_url",
+    "last_verified_on",
+    "drawdown",
+    "consistency_rule",
+    "targets_and_days",
+    "payout",
+    "prohibited_behaviors"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*--v[0-9]+$",
+      "description": "Stable, human-readable identifier: '<firm_id>-<plan-slug>-<account-size>-<phase>--v<version>'. Example: 'apex-static-50k-evaluation--v1'. The part before '--v' is the lineage key — every version of 'the same rule' shares it, so history can be reconstructed by grouping on it and sorting by 'version'."
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "description": "Version of THIS JSON Schema the record conforms to, not the rule's own version. Bump when the schema's shape changes so old records can be migrated deliberately."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "1-based revision counter for this lineage (record_id minus the '--vN' suffix). A firm changing its drawdown amount produces a new record with version = previous + 1 and a new effective_from; the prior record gets its effective_to closed off. Records are append-only — never mutate a published version in place."
+    },
+    "status": {
+      "enum": ["draft", "verified", "superseded"],
+      "description": "'draft' = entered from a secondary/inferred source and awaiting human verification against the firm's own rulebook; 'verified' = a human confirmed it against source_url on last_verified_on; 'superseded' = effective_to has passed and a newer version of this lineage is now current. The tracker and comparison view should default to 'verified' + currently-effective records and surface 'draft' ones with a visible warning badge."
+    },
+    "firm_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Slug referencing an entry in the firm registry (firms.json), e.g. 'apex', 'take-profit-trader', 'tradeify'. Kept separate from display name so a firm rebrand doesn't break joins."
+    },
+    "plan_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The firm's own name for this account plan/program, verbatim, e.g. 'Static', 'PRO', 'Performance Account (PA)', '1-Step Evaluation'. Free text because firms invent marketing names faster than any enum could track; plan_kind below is what normalizes across firms."
+    },
+    "plan_kind": {
+      "enum": ["one_step", "two_step", "instant_funded", "other"],
+      "description": "Normalized shape of the PATH TO FUNDING, independent of the firm's marketing name and constant across every phase of the same program lineage — this is what the comparison view groups/filters on. 'one_step'/'two_step' = the trader passes one or two evaluation phases before funding; 'instant_funded' = no evaluation, funded-style rules apply from purchase. (Whether the funded drawdown itself later converts to a static floor is a property of THAT phase's drawdown block — see drawdown.type/drawdown.lock on the funded-phase record — deliberately not duplicated here, to avoid two fields disagreeing about the same fact.)"
+    },
+    "account_size": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Starting/nominal account balance in 'currency', e.g. 50000 for a $50K account. This is the reference value that percentage-based params (drawdown %, profit target %) resolve against unless the param overrides it."
+    },
+    "currency": {
+      "const": "USD",
+      "description": "ISO 4217 code. Constrained to USD for v1 — every firm in scope quotes accounts in USD. Loosen this (and re-derive any percentage math) before onboarding a non-USD firm."
+    },
+    "phase": {
+      "enum": ["evaluation", "funded"],
+      "description": "Normalized two-stage lifecycle every firm maps onto, regardless of how many marketing sub-stages they invent (e.g. Apex's Eval -> PA -> Live Funded all collapse to 'evaluation' or 'funded' here). This is the field computation keys off; phase_label preserves the firm's own term for display."
+    },
+    "phase_label": {
+      "type": "string",
+      "description": "The firm's own name for this phase/sub-stage, verbatim, e.g. 'PA - Performance Account', '2nd Step', 'Live Funded Account'. Display-only; never branch logic on this field."
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date (YYYY-MM-DD) this version of the rule took effect. Combined with effective_to, this is the time-travel key: to evaluate a trade, find the record in this lineage where effective_from <= trade_date < effective_to (or effective_to is null)."
+    },
+    "effective_to": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "ISO 8601 date this version stopped applying (exclusive), or null if it is the current/open-ended version. Set this on the OLD record at the moment a new version is published — the two must never overlap or gap within a lineage."
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Deep link to the firm's own page (rules/FAQ/knowledge base) this record was transcribed from. Required for every record so a human can re-verify it; prefer the most specific page over a general homepage."
+    },
+    "last_verified_on": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date a human last cross-checked this record's fields against source_url. Distinct from effective_from: a rule can be verified long after (or before, if pre-announced) it takes effect."
+    },
+    "change_notes": {
+      "type": "string",
+      "description": "Human-readable summary of what changed vs. the previous version in this lineage, and why (e.g. 'Apex cut max drawdown on $50K Static from $2,500 to $2,000 effective 2026-01-15, announced via email 2025-12-20'). Empty/omit for a lineage's first version."
+    },
+
+    "drawdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "calculation_basis", "amount", "lock", "notes"],
+      "description": "The single most computation-critical block: this is what lets the (future) tracker compute live distance-to-breach correctly per firm. Modeled as an enum'd type + structured params rather than prose specifically so 'distance to breach' can be a pure function of (type, params, account history).",
+      "properties": {
+        "type": {
+          "enum": ["EOD_trailing", "intraday_trailing", "static"],
+          "description": "EOD_trailing: the floor ratchets up to track the highest end-of-day balance (intraday open-position swings don't move it). intraday_trailing: the floor ratchets up in real time with the highest equity intraday (open-position P&L counts immediately — strictly stricter than EOD for the same amount). static: the floor never moves from its initial level regardless of profits."
+        },
+        "calculation_basis": {
+          "enum": ["balance", "equity"],
+          "description": "What value is compared against the floor to detect a breach RIGHT NOW: 'balance' = closed-trade account balance only (open-position P&L ignored until the position closes or EOD marks it); 'equity' = balance including mark-to-market unrealized P&L on open positions. Note this is independent of 'type': e.g. a firm can ratchet the floor on EOD balance (type=EOD_trailing) while still breaching intraday on live equity (calculation_basis=equity) — always read both fields together, don't infer one from the other."
+        },
+        "amount": {
+          "$ref": "#/$defs/moneyOrPercent",
+          "description": "Size of the drawdown allowance. For trailing types this is how far the floor sits below the running high-water mark; for static it's the fixed distance below the initial balance. 'percentage_of_starting_balance' resolves against the record's account_size."
+        },
+        "lock": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["locks", "trigger", "locked_level", "notes"],
+          "description": "Whether/when a trailing floor stops ratcheting and freezes in place — the detail that most often catches traders off guard, since it changes the floor from a moving target to a fixed one mid-account.",
+          "properties": {
+            "locks": {
+              "type": "boolean",
+              "description": "True if the trailing floor can freeze before the account converts to fully static/funded. Always false when type='static' (there's nothing to lock) and trivially true in spirit for funded accounts that have already fully converted to static — set 'trigger' to 'not_applicable' in that case and describe the conversion in 'notes' instead."
+            },
+            "trigger": {
+              "enum": [
+                "balance_reaches_starting_balance",
+                "unrealized_profit_reaches_threshold",
+                "profit_target_reached",
+                "never",
+                "not_applicable"
+              ],
+              "description": "Condition that freezes the floor. 'balance_reaches_starting_balance' is the most common ('lock at breakeven'): once the trailed floor would rise to/above the initial balance, it stops at the initial balance and never moves again. 'unrealized_profit_reaches_threshold' / 'profit_target_reached' cover firms that lock on a different milestone. 'never' = floor trails for the lifetime of the account. 'not_applicable' = type='static' (nothing trails) or the account has already fully converted to a static funded structure."
+            },
+            "locked_level": {
+              "$ref": "#/$defs/moneyOrPercentOrNull",
+              "description": "The floor level once locked, e.g. {kind: 'fixed_dollar', value: 50000} for 'locks at the starting balance'. Null when locks=false or trigger is 'never'/'not_applicable'."
+            },
+            "trigger_threshold": {
+              "$ref": "#/$defs/moneyOrPercentOrNull",
+              "description": "The milestone value that fires the trigger, when the trigger itself is parameterized (e.g. trigger='unrealized_profit_reaches_threshold' might fire at +$100 or +1% open profit). Null when the trigger is self-describing (e.g. 'balance_reaches_starting_balance' needs no extra parameter — the threshold IS the starting balance, already captured by account_size)."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Plain-language caveats that don't fit the structured fields, e.g. 'Locks the FIRST time end-of-day balance closes at/above the starting balance, even if it later dips back below.' Keep this to clarifications of the mechanism above — don't restate the enum values."
+            }
+          }
+        },
+        "notes": {
+          "type": "string",
+          "description": "Any drawdown mechanics not captured above, e.g. how weekend/holiday gaps are marked, whether the floor is recalculated intraday vs. only at the daily reset time, or the exact daily reset timestamp/timezone (e.g. '5:00pm ET close')."
+        }
+      }
+    },
+
+    "consistency_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cap_percentage", "basis", "basis_definition", "applies_at"],
+      "description": "Caps how concentrated profit can be in a single day. This is the rule traders most often blow past unintentionally ('fine at Apex, but this just broke Tradeify's cap') because it depends on cumulative account history, not just the current trade.",
+      "properties": {
+        "cap_percentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Maximum share of total profit a single day may represent, as a percentage. 0 = the firm has no consistency rule for this record (in which case 'basis' should be 'none' and 'applies_at' should be an empty array)."
+        },
+        "basis": {
+          "enum": [
+            "best_day_share_of_total_profit",
+            "best_day_share_of_payout_eligible_profit",
+            "none"
+          ],
+          "description": "What the best day's profit is measured as a share OF. 'best_day_share_of_total_profit': cumulative profit over the whole evaluation/funded period to date. 'best_day_share_of_payout_eligible_profit': only profit accrued since the last payout / within the current payout cycle counts toward the denominator — materially different math from the first option. 'none' pairs with cap_percentage=0."
+        },
+        "basis_definition": {
+          "type": "string",
+          "description": "Precise, human-readable statement of the calculation as the firm defines it, including what counts as 'a day' (e.g. the same daily-reset boundary as drawdown, or calendar day) and whether losing days net against the total or are excluded. This is the field to quote verbatim/near-verbatim from the rulebook — the enum above picks the bucket, this field nails the exact formula."
+        },
+        "applies_at": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["evaluation", "funded", "payout_calculation"]
+          },
+          "description": "Which stage(s) the cap is actually enforced at. A firm can require consistency to PASS an evaluation but not enforce it once funded, or — the trickiest case — not gate daily trading at all but silently reduce a payout if the cap was exceeded over the payout window ('payout_calculation'). Empty array when cap_percentage=0."
+        },
+        "violation_consequence": {
+          "type": "string",
+          "description": "What actually happens on breach — account fails, payout is reduced/delayed, or just a warning — since firms differ sharply here and it changes how 'risky' the rule is in practice."
+        }
+      }
+    },
+
+    "targets_and_days": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profit_target", "min_trading_days", "min_qualifying_day_amount"],
+      "description": "The pace/gating requirements for advancing through (or maintaining) this phase.",
+      "properties": {
+        "profit_target": {
+          "$ref": "#/$defs/moneyOrPercentOrNull",
+          "description": "Cumulative profit required to pass this phase (typically evaluation) or maintain this status. Null when the phase has no profit target (e.g. most funded/live phases)."
+        },
+        "min_trading_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum number of QUALIFYING days (see min_qualifying_day_amount) required before the phase can be passed or a payout requested, depending on context captured in 'notes' on the relevant block. 0 = no minimum."
+        },
+        "min_qualifying_day_amount": {
+          "$ref": "#/$defs/moneyOrPercentOrNull",
+          "description": "Minimum net profit a calendar/trading day must show for it to count toward min_trading_days (some firms require e.g. $50+ net profit for a day to 'qualify'; days that don't clear this bar are traded but don't count toward the minimum). Null = every day with any activity counts, or the firm has no such floor."
+        },
+        "max_trading_days": {
+          "type": ["integer", "null"],
+          "description": "Upper bound on how long the phase can run before it expires, in calendar or trading days as the firm defines (clarify in notes if ambiguous). Null = unlimited / no time limit."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Clarifications on day-counting, target stacking across multiple steps, weekend/holiday treatment, etc."
+        }
+      }
+    },
+
+    "payout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eligible", "min_amount", "max_amount", "cadence", "activation_fee", "profit_split_to_trader_percentage"],
+      "description": "Whether and how a trader can withdraw profit from an account in this phase. Most 'evaluation' records will have eligible=false; this block is most meaningful on 'funded' records.",
+      "properties": {
+        "eligible": {
+          "type": "boolean",
+          "description": "Whether accounts in this phase can request payouts at all. False for essentially every evaluation phase; the remaining fields in this block are only meaningful when true (set them to null/'not_applicable' as typed when false, and explain the path to eligibility in eligibility_notes)."
+        },
+        "eligibility_notes": {
+          "type": "string",
+          "description": "Conditions that must be met before the FIRST payout specifically (e.g. 'first payout requires 5 winning days of $200+ AND account active 14+ calendar days'), since first-payout gates are frequently stricter than steady-state cadence rules."
+        },
+        "min_amount": {
+          "$ref": "#/$defs/moneyOrPercentOrNull",
+          "description": "Minimum withdrawable amount per payout request. Null if not eligible or the firm has no floor."
+        },
+        "max_amount": {
+          "$ref": "#/$defs/moneyOrPercentOrNull",
+          "description": "Maximum withdrawable amount per payout request or cycle (read alongside 'cadence' to know the period this caps). Null if not eligible or the firm has no ceiling."
+        },
+        "cadence": {
+          "enum": [
+            "on_demand",
+            "weekly",
+            "biweekly",
+            "monthly",
+            "first_payout_then_on_demand",
+            "other",
+            "not_applicable"
+          ],
+          "description": "How often payouts can be requested. 'first_payout_then_on_demand' covers the common pattern where the first payout has a fixed wait/schedule and subsequent ones are on-demand. 'not_applicable' when eligible=false."
+        },
+        "cadence_notes": {
+          "type": "string",
+          "description": "Specifics the enum can't carry, e.g. exact processing windows, blackout periods, or how 'biweekly' is anchored (calendar weeks vs. rolling from account start)."
+        },
+        "activation_fee": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "amount"],
+          "description": "Some firms require a one-time paid 'activation' before the FIRST withdrawal can be processed — a meaningful gotcha that's easy to miss until payout day.",
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "Whether a fee must be paid before the first withdrawal can be processed on an account in this phase."
+            },
+            "amount": {
+              "$ref": "#/$defs/moneyOrPercentOrNull",
+              "description": "The fee amount, if required. Null when required=false."
+            }
+          }
+        },
+        "profit_split_to_trader_percentage": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Share of withdrawable profit that goes to the trader, as a percentage (e.g. 90 for a 90/10 split, 100 for 'first $X is 100% to trader, then 90/10 thereafter' — capture the tiered detail in cadence_notes/eligibility_notes and put the steady-state split here). Null if not eligible or the firm doesn't disclose a split (e.g. fully-owned funded models)."
+        }
+      }
+    },
+
+    "prohibited_behaviors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "automated_trading",
+        "cross_account_hedging",
+        "dca_or_martingale",
+        "news_trading",
+        "vpn_usage",
+        "copy_trading"
+      ],
+      "description": "Firm policy on the trading behaviors most likely to get an account disabled even while it's technically within its drawdown/consistency limits. Modeled as a tri-state status (not a plain boolean) because the real-world rules are rarely a flat yes/no — 'restricted' (allowed under conditions, e.g. 'flatten 2 minutes before red-folder news') is its own common, important state that a boolean would erase.",
+      "properties": {
+        "automated_trading": { "$ref": "#/$defs/behaviorPolicy" },
+        "cross_account_hedging": {
+          "allOf": [{ "$ref": "#/$defs/behaviorPolicy" }],
+          "description": "Policy on holding opposing positions in the same instrument across the trader's own multiple accounts (at this firm and/or across firms — clarify scope in notes). One of the most consequential rules for the multi-firm traders this product targets."
+        },
+        "dca_or_martingale": {
+          "allOf": [{ "$ref": "#/$defs/behaviorPolicy" }],
+          "description": "Policy on dollar-cost-averaging into a losing position / martingale-style position-size escalation as a recovery tactic."
+        },
+        "news_trading": { "$ref": "#/$defs/behaviorPolicy" },
+        "vpn_usage": { "$ref": "#/$defs/behaviorPolicy" },
+        "copy_trading": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scope", "notes"],
+          "description": "Policy on mirroring/copying trades between accounts — distinct from cross_account_hedging because copying is directionally aligned (same trade, multiple accounts) rather than opposing.",
+          "properties": {
+            "scope": {
+              "enum": ["prohibited", "own_accounts_only", "unrestricted", "not_addressed"],
+              "description": "'own_accounts_only' = the firm explicitly permits copying trades across accounts the SAME trader owns at that firm (common — it's how multi-account traders operate) but prohibits copying to/from third parties. 'not_addressed' = the rulebook is silent; don't infer 'unrestricted' from silence."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Scope clarifications, e.g. whether copying across DIFFERENT firms is addressed, or whether copy-trading software/services are named specifically."
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "moneyOrPercent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "description": "A quantity expressed either as a fixed dollar amount or as a percentage that resolves against the record's account_size. Using a tagged union (rather than overloading a bare number) keeps 'is this dollars or percent' an explicit, type-checked decision everywhere money-like values appear — which is what makes cross-firm and cross-account-size comparison safe to automate.",
+      "properties": {
+        "kind": {
+          "enum": ["fixed_dollar", "percentage_of_starting_balance"]
+        },
+        "value": {
+          "type": "number",
+          "description": "For 'fixed_dollar': the amount in the record's currency, e.g. 2500. For 'percentage_of_starting_balance': the percentage as a number (e.g. 5 for 5%, NOT 0.05) — multiply by account_size/100 to resolve to a dollar figure."
+        }
+      }
+    },
+    "moneyOrPercentOrNull": {
+      "oneOf": [
+        { "$ref": "#/$defs/moneyOrPercent" },
+        { "type": "null" }
+      ],
+      "description": "Same tagged union as moneyOrPercent, but nullable for fields that are legitimately inapplicable (e.g. a payout cap when the phase isn't payout-eligible) rather than merely unknown. Use 'draft' status + a note for 'unknown'; reserve null for 'genuinely does not apply'."
+    },
+    "behaviorPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "notes"],
+      "properties": {
+        "status": {
+          "enum": ["prohibited", "restricted", "allowed", "not_addressed"],
+          "description": "'prohibited' = flat ban, grounds for account termination. 'restricted' = allowed under stated conditions (the conditions belong in 'notes'). 'allowed' = explicitly permitted. 'not_addressed' = the rulebook doesn't mention it — record this rather than guessing 'allowed', since silence and permission are not the same thing and a firm can enforce an unwritten policy at its discretion."
+        },
+        "notes": {
+          "type": "string",
+          "description": "The conditions, definitions, or enforcement specifics behind the status — this is where most of the actual decision-relevant information lives, especially for 'restricted'."
+        }
+      }
+    }
+  }
+}

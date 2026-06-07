@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prop Firm Rules — Cross-Firm Comparison</title>
+  <link rel="stylesheet" href="/app/styles.css" />
+</head>
+<body>
+  <header class="page-header">
+    <p class="eyebrow">Cross-firm prop trading rules intelligence</p>
+    <h1>One trade. Five rulebooks. Which one just broke?</h1>
+    <p class="tagline">
+      Every funded-futures firm normalizes drawdown, consistency, and payout rules differently —
+      and quietly disables accounts over the gaps. This is a normalized, sourced, date-stamped
+      view of what each firm's rulebook actually says, side by side, so "fine at Apex" doesn't
+      silently become "broke Tradeify's consistency cap."
+    </p>
+  </header>
+
+  <main>
+    <section id="picker" class="panel" aria-label="Choose accounts to compare"></section>
+    <section id="comparison" class="panel" aria-label="Comparison table"></section>
+  </main>
+
+  <footer class="page-footer">
+    <p>
+      Every figure links back to the firm's own published rules via the
+      <strong>Source</strong> row. Records badged
+      <span class="badge status-warn">Draft — needs verification</span>
+      were compiled from those sources but not yet hand-confirmed against the live rulebook —
+      treat their numbers as a starting point for verification, not as facts to trade on.
+      Hover the <span class="info-icon" title="Like this — hover any ⓘ for the sourced detail behind a value.">ⓘ</span>
+      icons throughout the table for the full sourced detail behind each value.
+    </p>
+  </footer>
+
+  <script type="module" src="/app/app.js"></script>
+</body>
+</html>

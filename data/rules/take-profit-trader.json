@@ -1,0 +1,164 @@
+[
+  {
+    "record_id": "take-profit-trader-test-50k-evaluation--v1",
+    "schema_version": "1.0.0",
+    "version": 1,
+    "status": "draft",
+    "firm_id": "take-profit-trader",
+    "plan_name": "Test Account",
+    "plan_kind": "one_step",
+    "account_size": 50000,
+    "currency": "USD",
+    "phase": "evaluation",
+    "phase_label": "Test",
+    "effective_from": "2025-01-15",
+    "effective_to": null,
+    "source_url": "https://takeprofittraderhelp.zendesk.com/hc/en-us/articles/15170265979165-Rule-3-Do-Not-Hit-End-Of-Day-EOD-Maximum-Trailing-Drawdown",
+    "last_verified_on": "2026-06-07",
+    "change_notes": "Seed record compiled 2026-06-07 from TPT's official Zendesk help-center pages (takeprofittraderhelp.zendesk.com returned HTTP 403/Cloudflare-blocked to direct fetch in the research environment; facts drawn from search-engine-indexed snippets of those exact pages plus cross-checked third-party trackers). 'effective_from' is an ESTIMATE — approximated from TPT's reported January-2025 removal of the standalone daily-loss-limit for Test/PRO accounts — not a confirmed rule-publication date; replace once confirmed. TPT runs a further 'PRO+' (live funded) stage above PRO with its own static-drawdown conversion and a 90/10 split; that stage is not yet captured as a separate record in this lineage.",
+    "drawdown": {
+      "type": "EOD_trailing",
+      "calculation_basis": "balance",
+      "amount": { "kind": "fixed_dollar", "value": 2000 },
+      "lock": {
+        "locks": true,
+        "trigger": "balance_reaches_starting_balance",
+        "locked_level": { "kind": "fixed_dollar", "value": 50000 },
+        "trigger_threshold": null,
+        "notes": "Unlike Apex/Tradeify's '+$100 offset' lock, TPT's published Rule 3 states the EOD-trailing floor stops trailing once it reaches the ORIGINAL STARTING BALANCE exactly — i.e. it locks at breakeven with no offset. From that point the floor is frozen and the account effectively trades on a static drawdown for the remainder of the Test phase."
+      },
+      "notes": "Calculated end-of-day on the realized/closing balance only — open-trade P&L does not move the floor mid-session. TPT removed a separate same-day 'daily loss limit' for Test/PRO accounts around January 2025 (the date used as this record's effective_from estimate — see change_notes), so the trailing drawdown is the ONLY account-level loss constraint during this phase."
+    },
+    "consistency_rule": {
+      "cap_percentage": 50,
+      "basis": "best_day_share_of_total_profit",
+      "basis_definition": "TPT's official 'Rule 5: Be Consistent' — the highest single trading day's net profit, divided by total net profit-to-date, must stay strictly below 50%. TPT's own example: on a $25K account with a $1,500 target, the single best day cannot exceed $750 until the $1,500 cumulative target is reached on its own. Breaking the ratio does not fail the account outright; it withholds the pass until subsequent profitable days bring the ratio back under 50% of the (now larger) cumulative total — which functionally raises the bar the trader must clear.",
+      "applies_at": ["evaluation"],
+      "violation_consequence": "Does not immediately fail the account — it simply withholds marking the evaluation 'passed' until later profitable days bring the best-day share back under 50%. TPT explicitly removes this rule entirely once a trader reaches PRO — see the funded-phase record, where cap_percentage is 0."
+    },
+    "targets_and_days": {
+      "profit_target": { "kind": "fixed_dollar", "value": 3000 },
+      "min_trading_days": 5,
+      "min_qualifying_day_amount": null,
+      "max_trading_days": null,
+      "notes": "A 'trading day' for the minimum-day count is simply any day on which at least one trade is placed — TPT does not appear to layer a minimum-DOLLAR 'qualifying day' threshold on top during the Test phase (contrast Apex's PA-stage $/day gate, or Tradeify's funded-stage gates, both modeled with a non-null min_qualifying_day_amount). Net effect: TPT's evaluation day-count rule is comparatively easy to satisfy — 5 active days plus the dollar target, no per-day profit floor."
+    },
+    "payout": {
+      "eligible": false,
+      "eligibility_notes": "Test accounts are evaluation-only and cannot request payouts. Passing converts the account to a funded PRO account (see the funded-phase record), which carries its own one-time activation fee before ITS first withdrawal.",
+      "min_amount": null,
+      "max_amount": null,
+      "cadence": "not_applicable",
+      "cadence_notes": "",
+      "activation_fee": { "required": false, "amount": null },
+      "profit_split_to_trader_percentage": null
+    },
+    "prohibited_behaviors": {
+      "automated_trading": {
+        "status": "prohibited",
+        "notes": "TPT's account rules state plainly that 'no automated or bot trading of any kind' is permitted and all trades must be manually executed — among the strictest automation bans of the firms in this comparison set, with no carve-out found for semi-automated order-entry tooling (contrast Tradeify's conditional 'restricted' stance)."
+      },
+      "cross_account_hedging": {
+        "status": "prohibited",
+        "notes": "TPT's 'counter-position rule' bans holding opposing positions in the same instrument across a trader's own multiple TPT accounts. Sources discuss this only in terms of TPT's OWN multi-account stable — whether it extends to hedging against a position at a DIFFERENT firm is not addressed anywhere found, which matters a great deal for the multi-firm traders this product targets. Recorded as 'prohibited' for the scope that IS confirmed (TPT's own accounts); the cross-firm question is an open gap, not a 'no'."
+      },
+      "dca_or_martingale": {
+        "status": "not_addressed",
+        "notes": "No rule explicitly naming DCA, martingale, or loss-averaging strategies was found anywhere in TPT's published rules. This may be a genuine gap in their rulebook (i.e. truly unrestricted in practice), or simply not surfaced in the pages indexed by search — recorded as 'not_addressed' rather than 'allowed' because the rulebook's silence is not the same thing as the firm's permission, and firms can and do act on unwritten policies at their own discretion."
+      },
+      "news_trading": {
+        "status": "allowed",
+        "notes": "Explicitly unrestricted during the Test phase — no flat-before-news requirement applies to evaluation accounts at all. This flips hard at the funded PRO stage, which imposes a strict mandatory-flat window around FOMC and Non-Farm Payrolls — see the funded-phase record for exactly the kind of 'fine here, breaks there' shift this product exists to surface."
+      },
+      "vpn_usage": {
+        "status": "restricted",
+        "notes": "No standalone 'no VPN' rule was found; the only VPN-adjacent restriction is geographic — trading from a sanctioned/restricted country is banned 'including via VPNs, remote connections, or shared networks that route activity through a restricted country.' A VPN used for an unrelated purpose (e.g. general privacy) from an eligible country does not appear to be separately addressed."
+      },
+      "copy_trading": {
+        "scope": "own_accounts_only",
+        "notes": "TPT's Trade Copier Policy permits 'approved' copiers ONLY to manage accounts the trader personally owns and controls — explicitly scoped to the trader's own stable, with syncing across different users/identities banned outright. Note the carve-out is reported to be exercisable only once a trader reaches PRO+ (up to 5 linked accounts); automated copying between accounts is described as flatly NOT permitted at the PRO stage that sits between Test and PRO+ — see the funded-phase record for that stricter mid-stage policy."
+      }
+    }
+  },
+  {
+    "record_id": "take-profit-trader-pro-50k-funded--v1",
+    "schema_version": "1.0.0",
+    "version": 1,
+    "status": "draft",
+    "firm_id": "take-profit-trader",
+    "plan_name": "PRO Account",
+    "plan_kind": "one_step",
+    "account_size": 50000,
+    "currency": "USD",
+    "phase": "funded",
+    "phase_label": "PRO (simulated funded)",
+    "effective_from": "2025-01-15",
+    "effective_to": null,
+    "source_url": "https://takeprofittraderhelp.zendesk.com/hc/en-us/articles/15171769361053-PRO-Account-Rules",
+    "last_verified_on": "2026-06-07",
+    "change_notes": "Seed record compiled 2026-06-07 alongside this lineage's Test record — see that record's change_notes for sourcing/date caveats (same Cloudflare-blocked official source; same estimated effective_from). The single most important fact captured here is the DRAWDOWN-MECHANIC SHIFT versus the Test phase: PRO switches from end-of-day/balance-based trailing to real-time/equity-based intraday trailing — widely reported as the #1 thing that catches TPT traders off guard when they advance from Test to PRO. A further PRO+ ('live funded') stage sits above this one with its own static-drawdown conversion and 90/10 split; not yet captured as a separate record.",
+    "drawdown": {
+      "type": "intraday_trailing",
+      "calculation_basis": "equity",
+      "amount": { "kind": "fixed_dollar", "value": 2000 },
+      "lock": {
+        "locks": false,
+        "trigger": "never",
+        "locked_level": null,
+        "trigger_threshold": null,
+        "notes": "INFERENCE, NOT A CONFIRMED RULE — flag for direct verification. No lock/freeze condition for the PRO-phase intraday-trailing floor was found in any source. TPT's own description of the PRO -> PRO+ transition (which fully RESETS the account to a $0 balance with a brand-new EOD drawdown structure, rather than 'unlocking' a frozen floor in place) is most consistent with the floor continuing to trail for the entirety of the PRO phase without ever freezing — but this is a read-between-the-lines inference from how the NEXT stage is described, not a statement TPT makes about PRO directly. Treat locks=false here as the operator's best current guess, not fact, until confirmed against TPT's primary text."
+      },
+      "notes": "Calculated in REAL TIME off peak EQUITY — i.e. it includes mark-to-market unrealized P&L on open positions, not just realized/closed balance. This is strictly less forgiving than the Test phase's end-of-day/balance-only floor: an intraday drawdown spike from an open losing position can breach the PRO floor and trigger immediate liquidation even if the position would have recovered by end of day. TPT explicitly frames this shift as the single biggest behavioral adjustment traders must make moving from Test to PRO."
+    },
+    "consistency_rule": {
+      "cap_percentage": 0,
+      "basis": "none",
+      "basis_definition": "TPT explicitly removes the consistency/best-day check once an account reaches PRO — Rule 5 ('Be Consistent') is scoped to the Test phase only and does not carry forward into funded trading or payout calculations.",
+      "applies_at": [],
+      "violation_consequence": ""
+    },
+    "targets_and_days": {
+      "profit_target": null,
+      "min_trading_days": 0,
+      "min_qualifying_day_amount": null,
+      "max_trading_days": null,
+      "notes": "No ongoing profit target or minimum-day requirement applies to maintain PRO status — the account simply needs to stay above its (now intraday-trailing) drawdown floor. Contrast this with Apex and Tradeify, both of which gate FUNDED-stage PAYOUTS on a minimum qualifying-day count; TPT instead gates payouts on the 'buffer zone' mechanic captured in the payout block below — a structurally different approach to the same underlying goal (don't let one lucky day define a payout)."
+    },
+    "payout": {
+      "eligible": true,
+      "eligibility_notes": "TPT's headline payout pitch is 'make it on day one, take it on day one': profit ABOVE the account's 'buffer zone' — buffer zone = the account's max-drawdown amount, $2,000 for this $50K/PRO combination, i.e. balance above $52,000 — can be withdrawn immediately at the standard split shown below, with no waiting period or day-count gate at all. Profit WITHIN the buffer zone is reported to be withdrawable only at account closure, at a reduced split tied to how long the account has been active: 50% under 60 trading days active, rising to 80% at 60+ days. This buffer-split detail is sourced only from third-party paraphrase of TPT's official withdrawal-rules page (direct fetch blocked) — confirm against the primary text before relying on it.",
+      "min_amount": null,
+      "max_amount": null,
+      "cadence": "on_demand",
+      "cadence_notes": "TPT advertises unlimited-frequency, on-demand withdrawals — no fixed weekly/biweekly schedule, which is unusual among the firms in this comparison set (most run scheduled payout windows). The one wrinkle: a withdrawal request of $250 or less incurs a flat $50 processing fee, while requests above $250 are free. That $250 figure is a FEE THRESHOLD, not a payout minimum — there is no stated floor on how small a payout request can be.",
+      "activation_fee": { "required": true, "amount": { "kind": "fixed_dollar", "value": 130 } },
+      "profit_split_to_trader_percentage": 80
+    },
+    "prohibited_behaviors": {
+      "automated_trading": {
+        "status": "prohibited",
+        "notes": "Same firm-wide manual-execution-only rule as the Test phase carries unchanged into PRO — see that record."
+      },
+      "cross_account_hedging": {
+        "status": "prohibited",
+        "notes": "Same 'counter-position rule' as the Test phase, banning opposing same-instrument positions across the trader's own multiple TPT accounts. Same open question applies: cross-FIRM hedging is not addressed in any source found for either phase."
+      },
+      "dca_or_martingale": {
+        "status": "not_addressed",
+        "notes": "Same as the Test phase — no rule explicitly naming DCA/martingale strategies was found at the PRO stage either."
+      },
+      "news_trading": {
+        "status": "restricted",
+        "notes": "Materially STRICTER than the Test phase — exactly the 'fine in evaluation, breaks funded' shift this product is built to catch. PRO accounts must be completely flat (no open positions AND no working orders) for a window spanning one minute before, through, and one minute after designated high-impact releases — specifically FOMC announcements (Wednesdays, 2:00pm ET) and Non-Farm Payrolls (monthly, Friday, 8:30am ET)."
+      },
+      "vpn_usage": {
+        "status": "restricted",
+        "notes": "Same geographic-restriction framing as the Test phase — no separate funded-stage VPN rule was found in any source checked."
+      },
+      "copy_trading": {
+        "scope": "prohibited",
+        "notes": "Notably STRICTER than both the Test-phase default framing AND Apex's funded-stage policy: TPT's Trade Copier Policy states automated copy trading BETWEEN ACCOUNTS is simply not permitted at the PRO stage — the 'own accounts only' carve-out only becomes available at the further PRO+ stage (up to 5 linked accounts). A setup that is explicitly sanctioned at Apex's funded stage (one leader account driving up to 19 followers) would be a straightforward violation here — a textbook example of the cross-firm trap this product is meant to surface."
+      }
+    }
+  }
+]

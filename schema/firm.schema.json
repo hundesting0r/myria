@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hundesting0r/myria/schema/firm.schema.json",
+  "title": "Prop Firm Registry Entry",
+  "description": "Lightweight identity record for a prop firm, kept separate from its rule records (firm-account-rules.schema.json) so a rebrand, URL change, or status change never requires touching historical rule data. Rule records reference these by 'firm_id'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["firm_id", "display_name", "website_url", "rules_url", "status"],
+  "properties": {
+    "firm_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Stable slug used as the join key from firm-account-rules records, e.g. 'apex', 'take-profit-trader', 'tradeify'. Treat as immutable once any rule record references it — rename by migration, never in place."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Firm's current public-facing name, e.g. 'Apex Trader Funding'."
+    },
+    "legal_name": {
+      "type": "string",
+      "description": "Registered legal entity name if it differs from the brand name (useful for verifying source documents and payout-entity questions)."
+    },
+    "website_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Firm's primary marketing site."
+    },
+    "rules_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Best single landing page for the firm's rulebook/FAQ — the default 'view source' link in the UI when a more specific source_url isn't shown inline."
+    },
+    "platform_notes": {
+      "type": "string",
+      "description": "Which trading platforms/data feeds the firm supports (e.g. Tradovate, Rithmic, NinjaTrader) — informs which accounts this product can eventually pull live state from via adapters."
+    },
+    "status": {
+      "enum": ["active", "not_onboarding_new_traders", "defunct"],
+      "description": "Whether the firm is currently a going concern worth tracking. 'defunct' firms are kept (not deleted) for historical/comparison value but should be visually de-emphasized and excluded from default comparison views."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Anything a researcher updating this firm's rule records should know up front (e.g. 'frequently changes drawdown amounts without dating the change on their site — cross-check via support chat transcripts')."
+    }
+  }
+}

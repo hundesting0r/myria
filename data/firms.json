@@ -1,0 +1,32 @@
+[
+  {
+    "firm_id": "apex",
+    "display_name": "Apex Trader Funding",
+    "legal_name": "Apex Trader Funding, LLC",
+    "website_url": "https://apextraderfunding.com",
+    "rules_url": "https://apextraderfunding.com/account-rules",
+    "platform_notes": "Tradovate, Rithmic, NinjaTrader, TradingView and others via Apex's broker/platform partners.",
+    "status": "active",
+    "notes": "Three-stage lifecycle (Evaluation -> PA / Performance Account -> Live Funded Account); PA and Live Funded both normalize to phase='funded' here, with phase_label preserving Apex's own term. Frequently runs promotional pricing/discounts that don't change the underlying rules — don't confuse a sale price with a rules change."
+  },
+  {
+    "firm_id": "take-profit-trader",
+    "display_name": "Take Profit Trader",
+    "legal_name": "",
+    "website_url": "https://takeprofittrader.com",
+    "rules_url": "https://takeprofittrader.com/faq/",
+    "platform_notes": "Tradovate, Rithmic.",
+    "status": "active",
+    "notes": "Known for converting funded accounts to a static (non-trailing) drawdown floor — verify the exact conversion trigger and locked level per account size, since this is the detail traders most often get wrong."
+  },
+  {
+    "firm_id": "tradeify",
+    "display_name": "Tradeify",
+    "legal_name": "",
+    "website_url": "https://tradeify.co",
+    "rules_url": "https://help.tradeify.co/en/collections/11501721-accounts-rules",
+    "platform_notes": "Tradovate, Rithmic.",
+    "status": "active",
+    "notes": "Runs multiple parallel account tracks (Growth, Select, Lightning) with materially different rules, including different consistency-cap percentages per track (e.g. Growth funded = 35%, Select evaluation = 40%, Lightning = a progressive 20/25/30% schedule by payout number) — always key off plan_name/plan_kind, never assume one Tradeify rule applies firm-wide."
+  }
+]
